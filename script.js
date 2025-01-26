@@ -12,13 +12,14 @@ const addButton = document.getElementById("add-button");
 const downLoadButton = document.querySelector(".button-download");
 const overlay = document.getElementById("overlay");
 
+const host = 'https://6730692566e42ceaf1603670.mockapi.io/api/v1/todos'
+
 async function getData (){
     try{
-        const response = await fetch("https://6730692566e42ceaf1603670.mockapi.io/api/v1/todos",
+        const response = await fetch(host,
             {
             method: "GET",
-        }
-        );
+        });
         if (!response.ok) {
             throw new Error(`Failed to fetch data. ${response.status}`);
         }
@@ -29,6 +30,7 @@ async function getData (){
         console.error(`Ошибка:`, error.message);
     }
     function renderData (todos){
+        container.innerHTML = '';
         todos.forEach((todo)=>{
             const todoElement = document.createElement('div');
             todoElement.classList.add('todo');
@@ -36,6 +38,10 @@ async function getData (){
             const checkbox = document.createElement("input");
             checkbox.type = "checkbox";
             checkbox.checked = todo.completed;
+
+            checkbox.addEventListener("change", () =>{
+                toggleTodoStatus(todo.id, checkbox.checked)
+            })
 
             const textElement = document.createElement("p");
             textElement.textContent = todo.text;
@@ -58,7 +64,9 @@ async function getData (){
             deleteIcon.title = 'delete';
 
             deleteButton.append(deleteIcon);
-
+            deleteButton.addEventListener("click", () =>{
+                deleteTodo(todo.id)
+            })
 
             const updateButton = document.createElement("button");
             updateButton.classList.add('button-function');
@@ -76,4 +84,39 @@ async function getData (){
         })
     }
 }
+
+async function deleteTodo(id){
+    try {
+        const response = await fetch(`${host}/${id}`, {
+            method: "DELETE",
+        })
+        if (!response.ok) {
+            throw new Error(`Failed to delete data. Status: ${response.status}`);
+        }
+        //console.log('Task is deleted:', data);
+        await getData()
+    }catch (error) {
+        console.error(`Ошибка:`, error.message);
+    }
+}
+
+async function toggleTodoStatus (id, completed){
+    try {
+        const response = await fetch(`${host}/${id}`, {
+            method: "PUT",
+            headers:{
+                "Content-Type": "application/json",
+            },
+            body: JSON.stringify({completed}),
+        })
+        if (!response.ok) {
+            throw new Error(`Failed to delete data. Status: ${response.status}`);
+        }
+
+        await getData()
+    }catch (error) {
+        console.error('Update is wrong', error.message);
+    }
+}
+
 downLoadButton.addEventListener("click", getData);
