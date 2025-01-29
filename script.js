@@ -14,24 +14,28 @@ const overlay = document.getElementById("overlay");
 
 const host = 'https://6730692566e42ceaf1603670.mockapi.io/api/v1/todos'
 
-async function getData (){
-    try{
+async function getData() {
+    try {
+        showLoader()
         const response = await fetch(host,
             {
-            method: "GET",
-        });
+                method: "GET",
+            });
         if (!response.ok) {
             throw new Error(`Failed to fetch data. ${response.status}`);
         }
         const data = await response.json();
         console.log(data);
         renderData(data)
-    }catch (error){
+    } catch (error) {
         console.error(`Ошибка:`, error.message);
+    }finally {
+        hideLoader()
     }
-    function renderData (todos){
+
+    function renderData(todos) {
         container.innerHTML = '';
-        todos.forEach((todo)=>{
+        todos.forEach((todo) => {
             const todoElement = document.createElement('div');
             todoElement.classList.add('todo');
 
@@ -39,7 +43,7 @@ async function getData (){
             checkbox.type = "checkbox";
             checkbox.checked = todo.completed;
 
-            checkbox.addEventListener("change", () =>{
+            checkbox.addEventListener("change", () => {
                 toggleTodoStatus(todo.id, checkbox.checked)
             })
 
@@ -47,7 +51,7 @@ async function getData (){
             textElement.textContent = todo.text;
 
             const timeElement = document.createElement("p");
-            timeElement.textContent = new Date(todo.createdAt).toLocaleString('ru-Ru',{
+            timeElement.textContent = new Date(todo.createdAt).toLocaleString('ru-Ru', {
                 year: 'numeric',
                 month: 'long',
                 day: 'numeric',
@@ -64,7 +68,7 @@ async function getData (){
             deleteIcon.title = 'delete';
 
             deleteButton.append(deleteIcon);
-            deleteButton.addEventListener("click", () =>{
+            deleteButton.addEventListener("click", () => {
                 deleteTodo(todo.id)
             })
 
@@ -78,6 +82,14 @@ async function getData (){
 
             updateButton.append(updateIcon)
 
+            updateButton.addEventListener("click", () => {
+                const newText = prompt(
+                    `Введите новый текст задачи: `, todo.text);
+                if (newText){
+                    updateTodo(todo.id, newText)
+                }
+            })
+
             todoElement.append(checkbox, textElement, timeElement, deleteButton, updateButton);
 
             container.append(todoElement);
@@ -85,7 +97,7 @@ async function getData (){
     }
 }
 
-async function deleteTodo(id){
+async function deleteTodo(id) {
     try {
         const response = await fetch(`${host}/${id}`, {
             method: "DELETE",
@@ -95,16 +107,51 @@ async function deleteTodo(id){
         }
         //console.log('Task is deleted:', data);
         await getData()
-    }catch (error) {
+    } catch (error) {
         console.error(`Ошибка:`, error.message);
     }
 }
 
-async function toggleTodoStatus (id, completed){
+async function addTodo() {
+    const newTodoText = taskInput.value.trim();
+
+    if (!newTodoText) {
+        alert("Введите текст задачи!");
+        return;
+    }
+
+    const newTodo = {
+        text: newTodoText,
+        createdAt: Date.now(),
+        completed: false,
+    };
+
+    try {
+        const response = await fetch(`${host}`, {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json",
+            },
+            body: JSON.stringify(newTodo),
+        });
+
+        if (!response.ok) {
+            throw new Error(`Не удалось добавить задачу. Статус: ${response.status}`);
+        }
+
+        console.log("Задача добавлена");
+        taskInput.value = ""; // Еще очищаем поле ввода новой задачи
+        getData();
+    } catch (error) {
+        console.error(`Ошибка добавления:`, error.message);
+    }
+}
+
+async function toggleTodoStatus(id, completed) {
     try {
         const response = await fetch(`${host}/${id}`, {
             method: "PUT",
-            headers:{
+            headers: {
                 "Content-Type": "application/json",
             },
             body: JSON.stringify({completed}),
@@ -114,9 +161,46 @@ async function toggleTodoStatus (id, completed){
         }
 
         await getData()
-    }catch (error) {
+    } catch (error) {
         console.error('Update is wrong', error.message);
     }
 }
 
+async function updateTodo(id, newText) {
+
+    try {
+        const response = await fetch(`${host}/${id}`, {
+            method: "PUT",
+            headers: {
+                "Content-Type": "application/json",
+            },
+            body: JSON.stringify({text: newText}),
+        });
+
+        if (!response.ok) {
+            throw new Error(`Не удалось обновить задачу. Статус: ${response.status}`);
+        }
+
+        console.log("Текст добавлен"); // Еще очищаем поле ввода новой задачи
+        await getData();
+    } catch (error) {
+        console.error(`Ошибка добавления текста:`, error.message);
+    }
+}
+
+addButton.addEventListener("click", addTodo);
+
+taskInput.addEventListener("keydown", (event) => {
+    if (event.key === 'Enter') {
+        addTodo();
+    }
+});
+
 downLoadButton.addEventListener("click", getData);
+
+function showLoader(){
+    overlay.style.display = "flex";
+}
+function hideLoader(){
+    overlay.style.display = "none";
+}
